@@ -1,0 +1,16 @@
+.vs/
+packages/
+
+CurrencyRate/obj/
+CurrencyRate/bin/
+CurrencyRate/wwwroot/
+
+Libs/DbRepositories/obj/
+Libs/DbRepositories/bin/
+
+Libs/Core/obj/
+Libs/Core/bin/
+
+Libs/Services/obj/
+Libs/Services/bin/
+
