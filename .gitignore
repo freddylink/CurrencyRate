@@ -1,9 +1,9 @@
 .vs/
 packages/
 
-CurrencyRate/obj/
-CurrencyRate/bin/
-CurrencyRate/wwwroot/
+Frontend/obj/
+Frontend/bin/
+Frontend/wwwroot/
 
 Libs/DbRepositories/obj/
 Libs/DbRepositories/bin/
@@ -13,4 +13,10 @@ Libs/Core/bin/
 
 Libs/Services/obj/
 Libs/Services/bin/
+
+Libs/Core.Tests/obj/
+Libs/Core.Tests/bin/
+
+Libs/Services.Tests/obj/
+Libs/Services.Tests/bin/
 

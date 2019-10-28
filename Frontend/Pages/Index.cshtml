@@ -1,0 +1,66 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Currency Rates";
+}
+
+<div class="row">
+    <div class="col-lg-4">
+        <form method="post" action="" class="form">
+            <div class="form-group">
+                <label for="date">Выберите дату в календаре:</label>
+                <input type="date" id="date" class="form-control datepicker" value="@Model.DateSelected" name="datePicker" onkeypress="return false" placeholder="Дата" required min="0001-01-01" max="9999-12-31">
+                <span class="validity"></span>
+                <div class="input-group-addon">
+                    <span class="glyphicon glyphicon-th"></span>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="currency">Выберите валюту для конвертации:</label>
+                <select class="form-control" id="currency" name="currency">
+                    @foreach (var currency in Model.CurrenciesSelected)
+                    {
+                        @if (currency != Model.CurrencySelected)
+                        {
+                            <option value="@currency">@currency</option>
+                        }
+                        else
+                        {
+                            <option value="@currency" selected>@currency</option>
+                        }
+
+                    }
+                </select>
+            </div>
+            <button id="button" type="submit" class="btn btn-primary">Показать</button>
+        </form>
+    </div>
+</div>
+
+@if (!String.IsNullOrEmpty(Model.ErrorRequestUser))
+{
+<h3>@Model.ErrorRequestUser</h3>
+}
+
+@if (Model.CurrencyRatesConverted.Count != 0)
+{
+<p></p>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Валюта</th>
+            <th>Значение</th>
+            <th>Источник</th>
+        </tr>
+    </thead>
+    @foreach (var item in Model.CurrencyRatesConverted)
+    {
+        <tr>
+            <td>@Html.DisplayFor(modelItem => item.CurrencyCode)</td>
+            <td>@Html.DisplayFor(modelItem => item.Rate)</td>
+            <td>@Html.DisplayFor(modelItem => item.BankId)</td>
+        </tr>
+    }
+</table>
+
+}

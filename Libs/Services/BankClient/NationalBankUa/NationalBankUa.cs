@@ -1,53 +1,67 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Core.Services.Enum;
+using DbRepositories.Data.Object;
+using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
+using Services.Converters;
 using Services.HttpModuleClient;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Services.BankClient.NationalBankUa
 {
-    public class NationalBankUa : BankClient 
+    public class NationalBankUa : IBankClient
     {
-        private readonly HttpModule _httpModule;
         private readonly string _url;
+        private readonly string _dateFormat;
 
-        public NationalBankUa(HttpModule httpModule, IConfiguration configuration) {
-            _httpModule = httpModule;
+        public NationalBankUa(IConfiguration configuration) {
             _url = configuration["BankClientConfig:NationalBankUa:url"];
+            _dateFormat = configuration["BankClientConfig:NationalBankUa:dateFormat"];
+        }
+
+        public async Task<IEnumerable<CurrencyRate>> GetCurrencyRatesByDate(DateTime date)
+        {
+            IEnumerable<CurrencyRate> currencyRates = new List<CurrencyRate>();
+            List<NationalBankUaDto> responseBankClientSerialize = new List<NationalBankUaDto>();
+
+            string responseBankClient = await HttpModule.DownloadData(UrlConfigurator(date));
+
+            try
+            {
+                responseBankClientSerialize = ApiParserData(responseBankClient);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Can't parse response. BankClient - NationalBankUa. Error: " + ex.Message);
+            }
+
+            if (responseBankClientSerialize.Count == 0 || responseBankClientSerialize.Count == 1)
+            {
+                throw new Exception("NationalBankUa - Wrong date. Error date: " + date);
+            }
+            
+            currencyRates = responseBankClientSerialize.Select(currencyItem => new CurrencyRate
+            {
+                BankId = BankClientType.NationalBankUa.ToString(),
+                CurrencyCode = currencyItem.Code,
+                Rate = currencyItem.Rate,
+                Timestamp = date.Date
+            });
+            
+            return currencyRates;
         }
 
         private string UrlConfigurator(DateTime date)
         {
-            return _url + date.ToString("yyyyMMdd") + "&json";
+            return _url + date.ToString(_dateFormat) + "&json";
         }
 
-        public async Task<List<NationalBankUaDto>> GetCurrencyByDate(DateTime date)
+        private List<NationalBankUaDto> ApiParserData(string responseBankClient)
         {
-            List<NationalBankUaDto> currencyRate = new List<NationalBankUaDto>();
-            dynamic result = ApiParserData(await _httpModule.GetDataClient(UrlConfigurator(date)));
-            
-            foreach (dynamic item in result)
-            {
-                NationalBankUaDto data = new NationalBankUaDto
-                {
-                    R030 = item["r030"],
-                    Txt = item["txt"],
-                    Rate = item["rate"],
-                    Cc = item["cc"]
-                };
-                currencyRate.Add(data);
-            }
-
-            return currencyRate;
+            return JsonConvert.DeserializeObject<List<NationalBankUaDto>>(responseBankClient);
         }
 
-        private dynamic ApiParserData(string apiData)
-        {
-            dynamic myNewObject = JsonConvert.DeserializeObject(apiData);
-
-            return myNewObject;
-        }
-        
     }
 }

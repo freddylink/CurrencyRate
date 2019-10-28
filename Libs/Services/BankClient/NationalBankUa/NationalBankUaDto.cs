@@ -1,14 +1,25 @@
 ﻿using System;
+using System.Runtime.Serialization;
 
 namespace Services.BankClient.NationalBankUa
 {
+    [DataContract]
     public class NationalBankUaDto
     {
-        public int NationalBankUaDtoId { get; set; }
+        [DataMember(Name = "R030")]
         public int R030 { get; set; }
+
+        [DataMember(Name = "Txt")]
         public string Txt { get; set; }
+
+        [DataMember(Name = "Rate")]
         public float Rate { get; set; }
-        public string Cc { get; set; }
-        public DateTime ExchangeDate { get; set; }
+
+        [DataMember(Name = "Cc")]
+        public string Code { get; set; }
+
+        [DataMember(Name = "Message")]
+        public string Message { get; set; }
+
     }
 }

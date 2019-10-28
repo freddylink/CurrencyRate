@@ -1,79 +1,36 @@
-﻿using DbRepositories.CurrencyRates.Object;
-using DbRepositories.CurrencyRates.Repository;
-using Services.BankClient.NationalBankKz;
-using Services.BankClient.NationalBankUa;
-using Services.BankClient.OpenExchangeRates;
+﻿using DbRepositories.Data;
+using DbRepositories.Data.Object;
+using Services.BankClientDataProvider;
 using System;
 using System.Collections.Generic;
-using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Core
 {
-    public class CurrencyRateService
+    public class CurrencyRateService : ICurrencyRateService
     {
-        private readonly NationalBankUa _nationalBankUa;
-        private readonly NationalBankKz _nationalBankKz;
-        private readonly OpenExchangeRates _openExchangeRates;
         private readonly CurrencyRateRepository _currencyRateRepository;
+        private readonly BankClientDataProvider _bankClientDataProvider;
 
-        public CurrencyRateService(
-            NationalBankUa nationalBankUa, 
-            NationalBankKz nationalBankKz, 
-            OpenExchangeRates openExchangeRates, 
-            CurrencyRateRepository currencyRateRepository)
+        public CurrencyRateService(CurrencyRateRepository currencyRateRepository, BankClientDataProvider bankClientDataProvider)
         {
-            _nationalBankUa = nationalBankUa;
-            _nationalBankKz = nationalBankKz;
-            _openExchangeRates = openExchangeRates;
             _currencyRateRepository = currencyRateRepository;
+            _bankClientDataProvider = bankClientDataProvider;
         }
 
-        public async Task<string> GetCurrencyRate(DateTime date)
+        public async Task<List<CurrencyRate>> GetCurrencyRates(DateTime date, string currency, string currencyDefault)
         {
-            List<NationalBankUaDto> result = await _nationalBankUa.GetCurrencyByDate(date);
-            List<NationalBankKzDto> result2 = await _nationalBankKz.GetCurrencyByDate(date);
-            List<OpenExchangeRatesDto> result3 = await _openExchangeRates.GetCurrencyByDate(date);
+            List<CurrencyRate> currencyRates = _currencyRateRepository.GetCurrencyItems(date, currency, currencyDefault);
 
-            foreach (NationalBankUaDto currencyDto in result)
+            if (currencyRates.Select(c => c.BankId).ToList().Distinct().Count() == 0)
             {
-                CurrencyRate currencyRate = new CurrencyRate
-                {
-                    BankId = 1,
-                    CurrencyCode = currencyDto.Txt.ToString(),
-                    Timestamp = currencyDto.ExchangeDate,
-                    Rate = currencyDto.Rate
-                };
-                _currencyRateRepository.Add(currencyRate);
+                IEnumerable<CurrencyRate> rates = await _bankClientDataProvider.GetRatesFromBanks(date);
+                _currencyRateRepository.Add(rates);
+                currencyRates.AddRange(rates);
             }
 
-            foreach (NationalBankKzDto currencyDto in result2)
-            {
-                CurrencyRate currencyRate = new CurrencyRate
-                {
-                    BankId = 2,
-                    CurrencyCode = currencyDto.fullname.ToString(),
-                    Timestamp = currencyDto.ExchangeDate,
-                    Rate = currencyDto.description
-                };
-                _currencyRateRepository.Add(currencyRate);
-            }
-
-            foreach (OpenExchangeRatesDto currencyDto in result3)
-            {
-                CurrencyRate currencyRate = new CurrencyRate
-                {
-                    BankId = 3,
-                    CurrencyCode = currencyDto.Code.ToString(),
-                    Timestamp = currencyDto.ExchangeDate,
-                    Rate = currencyDto.Rate
-                };
-                _currencyRateRepository.Add(currencyRate);
-            }
-
-
-            File.WriteAllText("D:\\new_file.txt", result3.ToString());
-            return result3.ToString();
+            return currencyRates;
         }
     }
 }

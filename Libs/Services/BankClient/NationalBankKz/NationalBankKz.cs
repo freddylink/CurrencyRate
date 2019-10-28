@@ -1,53 +1,58 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Core.Services.Enum;
+using DbRepositories.Data.Object;
+using Microsoft.Extensions.Configuration;
+using Services.Converters;
 using Services.HttpModuleClient;
 using System;
+using System.Linq;
 using System.Collections.Generic;
-using System.IO;
 using System.Threading.Tasks;
-using System.Xml;
-using System.Xml.Serialization;
 
 namespace Services.BankClient.NationalBankKz
 {
-    public class NationalBankKz : BankClient
+    public class NationalBankKz : IBankClient
     {
-        private readonly HttpModule _httpModule;
         private readonly string _url;
+        private readonly string _dateFormat;
 
-        public NationalBankKz(HttpModule httpModule, IConfiguration configuration)
+        public NationalBankKz(IConfiguration configuration)
         {
-            _httpModule = httpModule;
             _url = configuration["BankClientConfig:NationalBankKz:url"];
+            _dateFormat = configuration["BankClientConfig:NationalBankKz:dateFormat"];
+        }
+
+        public async Task<IEnumerable<CurrencyRate>> GetCurrencyRatesByDate(DateTime date)
+        {
+            IEnumerable<CurrencyRate> currencyRates = new List<CurrencyRate>();
+            NationalBankKzDto responseBankClientSerialize = new NationalBankKzDto();
+
+            string responseBankClient = await HttpModule.DownloadData(UrlConfigurator(date));
+            responseBankClientSerialize = XmlApiSerializer.DataConverterDto<NationalBankKzDto>(responseBankClient);
+
+            if (responseBankClientSerialize.Error == "введена неверная дата")
+            {
+                throw new Exception("NationalBankKz - Wrong format date. Error date: " + date);
+            }
+
+            if (responseBankClientSerialize.Rates.Count == 0)
+            {
+                throw new Exception("NationalBankKz - returned error. Date: " + date + ". Add information: " + responseBankClientSerialize.Info);
+            }
+
+            currencyRates = responseBankClientSerialize.Rates.Select(currencyItem => new CurrencyRate
+            {
+                BankId = BankClientType.NationalBankKz.ToString(),
+                CurrencyCode = currencyItem.Code,
+                Rate = currencyItem.Rate / currencyItem.Quantity,
+                Timestamp = date.Date
+            });
+
+            return currencyRates;
         }
 
         private string UrlConfigurator(DateTime date)
         {
-            return _url + date.ToShortDateString();
-        }
-
-        public async Task<List<NationalBankKzDto>> GetCurrencyByDate(DateTime date)
-        {
-            List<NationalBankKzDto> currencyRate = new List<NationalBankKzDto>();
-            string xmlData = await _httpModule.GetDataClient(UrlConfigurator(date));
-            XmlNodeList xmlList = ApiParserData(xmlData);
-            foreach (XmlNode item in xmlList)
-            {
-                XmlSerializer serializer = new XmlSerializer(typeof(NationalBankKzDto), new XmlRootAttribute("item"));
-                StringReader stringReader = new StringReader(item.OuterXml);
-                NationalBankKzDto data = (NationalBankKzDto)serializer.Deserialize(stringReader);
-                currencyRate.Add(data);
-            }
-
-            return currencyRate;
-        }
-
-        private XmlNodeList ApiParserData(string apiData)
-        {
-            XmlDocument xmlDocument = new XmlDocument();
-            xmlDocument.LoadXml(apiData);
-            XmlNodeList xmlList = xmlDocument.SelectNodes("/rates/item");
-
-            return xmlList;
+            return _url + date.ToString(_dateFormat);
         }
     }
 }

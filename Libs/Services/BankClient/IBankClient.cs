@@ -1,12 +1,12 @@
-﻿using DbRepositories.CurrencyRates.Object;
+﻿using DbRepositories.Data.Object;
 using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Threading.Tasks;
 
 namespace Services.BankClient
 {
     public interface IBankClient
     {
-        List<CurrencyRate> GetCurrencyByDate(DateTime date);
+        Task<IEnumerable<CurrencyRate>> GetCurrencyRatesByDate(DateTime date);
     }
 }
